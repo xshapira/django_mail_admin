@@ -47,7 +47,7 @@ def get_parent():
 
 def get_new_mail(mailbox_admin, request, queryset):
     for mailbox in queryset.all():
-        logger.debug('Receiving mail for %s' % mailbox)
+        logger.debug(f'Receiving mail for {mailbox}')
         got_mail = mailbox.get_new_mail()
         if len(got_mail) > 0:
             messages.success(request, _('Got {} new letters for mailbox "{}"').format(str(len(got_mail)), mailbox.name))
@@ -154,18 +154,13 @@ class IncomingEmailAdmin(admin.ModelAdmin):
 
     def from_address(self, msg):
         f = msg.from_address
-        if len(f) > 0:
-            return ','.join(f)
-        else:
-            return ''
+        return ','.join(f) if len(f) > 0 else ''
 
     from_address.short_description = _('From')
 
     def envelope_headers(self, msg):
         email = msg.get_email_object()
-        return '\n'.join(
-            [('%s: %s' % (h, v)) for h, v in email.items()]
-        )
+        return '\n'.join([f'{h}: {v}' for h, v in email.items()])
 
     inlines = [
         IncomingAttachmentInline,
@@ -211,8 +206,7 @@ class IncomingEmailAdmin(admin.ModelAdmin):
         return False
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
-        obj = IncomingEmail.objects.filter(id=object_id).first()
-        if obj:
+        if obj := IncomingEmail.objects.filter(id=object_id).first():
             if not obj.read:
                 obj.read = timezone.now()
                 obj.save()
@@ -281,7 +275,7 @@ class CommaSeparatedEmailWidget(TextInput):
             return ''
         if isinstance(value, str):
             value = [value, ]
-        return ','.join([item for item in value])
+        return ','.join(list(value))
 
 
 def requeue(modeladmin, request, queryset):
@@ -324,7 +318,7 @@ class OutgoingEmailAdmin(admin.ModelAdmin):
         # Try to get active Outbox and prepopulate from_email field
         form = super(OutgoingEmailAdmin, self).get_form(request, obj, **kwargs)
         configurations = Outbox.objects.filter(active=True)
-        if not (len(configurations) > 1 or len(configurations) == 0):
+        if len(configurations) <= 1 and len(configurations) != 0:
             form.base_fields['from_email'].initial = configurations.first().email_host_user
         return form
 

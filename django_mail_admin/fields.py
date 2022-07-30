@@ -17,8 +17,8 @@ class CommaSeparatedEmailField(TextField):
             'error_messages': {
                 'invalid': _('Only comma separated emails are allowed.'),
             }
-        }
-        defaults.update(kwargs)
+        } | kwargs
+
         return super(CommaSeparatedEmailField, self).formfield(**defaults)
 
     def from_db_value(self, value, expression, connection, context=None):
@@ -39,9 +39,6 @@ class CommaSeparatedEmailField(TextField):
 
     def to_python(self, value):
         if isinstance(value, str):
-            if value == '':
-                return []
-            else:
-                return [s.strip() for s in value.split(',')]
+            return [] if value == '' else [s.strip() for s in value.split(',')]
         else:
             return value

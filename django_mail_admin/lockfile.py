@@ -29,7 +29,7 @@ class FileLocked(Exception):
 class FileLock(object):
 
     def __init__(self, lock_filename, timeout=None, force=False):
-        self.lock_filename = '%s.lock' % lock_filename
+        self.lock_filename = f'{lock_filename}.lock'
         self.timeout = timeout
         self.force = force
         self._pid = str(os.getpid())

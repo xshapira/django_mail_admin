@@ -12,7 +12,7 @@ from django_mail_admin.mail import send_queued
 from django_mail_admin.models import OutgoingEmail, STATUS
 
 logger = setup_loghandlers()
-default_lockfile = tempfile.gettempdir() + "/django_mail_admin"
+default_lockfile = f"{tempfile.gettempdir()}/django_mail_admin"
 
 
 class Command(BaseCommand):
@@ -35,8 +35,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        logger.info('Acquiring lock for sending queued emails at %s.lock' %
-                    options['lockfile'])
+        logger.info(
+            f"Acquiring lock for sending queued emails at {options['lockfile']}.lock"
+        )
+
         try:
             with FileLock(options['lockfile']):
 

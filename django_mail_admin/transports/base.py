@@ -7,5 +7,4 @@ from email.errors import MessageParseError
 
 class EmailTransport(object):
     def get_email_from_bytes(self, contents):
-        message = email.message_from_bytes(contents)
-        return message
+        return email.message_from_bytes(contents)

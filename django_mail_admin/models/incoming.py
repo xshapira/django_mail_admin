@@ -119,23 +119,16 @@ class IncomingEmail(models.Model):
            `to_addresses`.
 
         """
-        if self.from_header:
-            return [parseaddr(self.from_header)[1].lower()]
-        else:
-            return []
+        return [parseaddr(self.from_header)[1].lower()] if self.from_header else []
 
     @property
     def to_addresses(self):
         """Returns a list of addresses to which this message was sent."""
-        addresses = []
-        for address in self.to_header.split(','):
-            if address:
-                addresses.append(
-                    parseaddr(
-                        address
-                    )[1].lower()
-                )
-        return addresses
+        return [
+            parseaddr(address)[1].lower()
+            for address in self.to_header.split(',')
+            if address
+        ]
 
     def get_reply_headers(self, headers=None):
         headers = headers or {}
@@ -156,7 +149,7 @@ class IncomingEmail(models.Model):
         from django_mail_admin.mail import send
         if 'sender' not in kwargs:
             if len(self.from_address) == 0 and not self.mailbox.from_email:
-                raise ValidationError('No sender address to reply from, %s' % str(self))
+                raise ValidationError(f'No sender address to reply from, {str(self)}')
             else:
                 kwargs['sender'] = self.from_address[0] or self.mailbox.from_email
         headers = self.get_reply_headers(kwargs.get('headers'))
@@ -223,11 +216,10 @@ class IncomingEmail(models.Model):
                     del new['Content-Transfer-Encoding']
                     encode_base64(new)
             except IncomingAttachment.DoesNotExist:
-                new[get_altered_message_header()] = (
-                    'Missing; Attachment %s not found' % (
-                    msg[get_attachment_interpolation_header()]
-                )
-                )
+                new[
+                    get_altered_message_header()
+                ] = f'Missing; Attachment {msg[get_attachment_interpolation_header()]} not found'
+
                 new.set_payload('')
         else:
             for header, value in msg.items():
@@ -299,7 +291,7 @@ class IncomingEmail(models.Model):
         return super(IncomingEmail, self).delete(*args, **kwargs)
 
     def __str__(self):
-        return self.subject + ' from ' + ','.join(self.from_address)
+        return f'{self.subject} from ' + ','.join(self.from_address)
 
     class Meta:
         verbose_name = _('Incoming email')
@@ -354,13 +346,10 @@ class IncomingAttachment(models.Model):
     def get_filename(self):
         """Returns the original filename of this attachment."""
         file_name = self._get_rehydrated_headers().get_filename()
-        if isinstance(file_name, str):
-            result = convert_header_to_unicode(file_name)
-            if result is None:
-                return file_name
-            return result
-        else:
+        if not isinstance(file_name, str):
             return None
+        result = convert_header_to_unicode(file_name)
+        return file_name if result is None else result
 
     def items(self):
         return self._get_rehydrated_headers().items()
@@ -368,7 +357,7 @@ class IncomingAttachment(models.Model):
     def __getitem__(self, name):
         value = self._get_rehydrated_headers()[name]
         if value is None:
-            raise KeyError('Header %s does not exist' % name)
+            raise KeyError(f'Header {name} does not exist')
         return value
 
     def __str__(self):

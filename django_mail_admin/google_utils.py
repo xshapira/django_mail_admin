@@ -52,9 +52,7 @@ def get_google_refresh_token(email):
 
 
 def google_api_get(email, url):
-    headers = dict(
-        Authorization="Bearer %s" % get_google_access_token(email),
-    )
+    headers = dict(Authorization=f"Bearer {get_google_access_token(email)}")
     r = requests.get(url, headers=headers)
     logger.info("I got a %s", r.status_code)
     if r.status_code == 401:
@@ -71,11 +69,9 @@ def google_api_get(email, url):
 
 def google_api_post(email, url, post_data, authorized=True):
     # TODO: Make this a lot less ugly. especially the 401 handling
-    headers = dict()
+    headers = {}
     if authorized is True:
-        headers.update(dict(
-            Authorization="Bearer %s" % get_google_access_token(email),
-        ))
+        headers |= dict(Authorization=f"Bearer {get_google_access_token(email)}")
     r = requests.post(url, headers=headers, data=post_data)
     if r.status_code == 401:
         refresh_authorization(email)
@@ -105,8 +101,6 @@ def refresh_authorization(email):
 
 
 def fetch_user_info(email):
-    result = google_api_get(
-        email,
-        "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
+    return google_api_get(
+        email, "https://www.googleapis.com/oauth2/v1/userinfo?alt=json"
     )
-    return result

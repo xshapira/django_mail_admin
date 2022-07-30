@@ -89,9 +89,10 @@ class OutgoingEmail(models.Model):
         self._cached_email_message = None
 
     def _get_context(self):
-        context = {}
-        for var in self.templatevariable_set.all().filter(email=self):
-            context[var.name] = var.value
+        context = {
+            var.name: var.value
+            for var in self.templatevariable_set.all().filter(email=self)
+        }
 
         return Context(context)
 
@@ -99,10 +100,7 @@ class OutgoingEmail(models.Model):
         """
         Returns Django EmailMessage object for sending.
         """
-        if self._cached_email_message:
-            return self._cached_email_message
-
-        return self.prepare_email_message()
+        return self._cached_email_message or self.prepare_email_message()
 
     def prepare_email_message(self):
         """
@@ -177,11 +175,12 @@ class OutgoingEmail(models.Model):
 
             # If log level is 0, log nothing, 1 logs only sending failures
             # and 2 means log both successes and failures
-            if log_level == 1:
-                if status == STATUS.failed:
-                    self.logs.create(status=status, message=message,
-                                     exception_type=exception_type)
-            elif log_level == 2:
+            if (
+                log_level == 1
+                and status == STATUS.failed
+                or log_level != 1
+                and log_level == 2
+            ):
                 self.logs.create(status=status, message=message,
                                  exception_type=exception_type)
 
@@ -190,7 +189,7 @@ class OutgoingEmail(models.Model):
         super(OutgoingEmail, self).save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.from_email) + " -> " + str(self.to) + " (" + self.subject + ")"
+        return f"{str(self.from_email)} -> {str(self.to)} ({self.subject})"
 
 
 class Attachment(models.Model):
@@ -260,15 +259,21 @@ def send_mail(subject, message, from_email, recipient_list, html_message='',
 
     subject = force_text(subject)
     status = None if priority == PRIORITY.now else STATUS.queued
-    emails = []
-    for address in recipient_list:
-        emails.append(
-            OutgoingEmail.objects.create(
-                from_email=from_email, to=address, subject=subject,
-                message=message, html_message=html_message, status=status,
-                headers=headers, priority=priority, scheduled_time=scheduled_time
-            )
+    emails = [
+        OutgoingEmail.objects.create(
+            from_email=from_email,
+            to=address,
+            subject=subject,
+            message=message,
+            html_message=html_message,
+            status=status,
+            headers=headers,
+            priority=priority,
+            scheduled_time=scheduled_time,
         )
+        for address in recipient_list
+    ]
+
     if priority == PRIORITY.now:
         for email in emails:
             email.dispatch()

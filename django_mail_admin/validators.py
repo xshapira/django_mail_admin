@@ -13,7 +13,7 @@ def validate_email_with_name(value):
     """
     value = force_text(value)
 
-    if '<' and '>' in value:
+    if '>' in value:
         lesses = value.count('<')
         biggers = value.count('>')
         if lesses > 1 or biggers > 1:
@@ -41,7 +41,7 @@ def validate_comma_separated_emails(value):
         try:
             validate_email_with_name(email)
         except ValidationError:
-            raise ValidationError('Invalid email: %s' % email, code='invalid')
+            raise ValidationError(f'Invalid email: {email}', code='invalid')
 
 
 def validate_template_syntax(source):

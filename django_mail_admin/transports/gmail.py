@@ -41,11 +41,7 @@ class GmailImapTransport(ImapTransport):
                 # Trying again is the right thing to do
                 pass
             except AccessTokenNotFound:
-                raise ValueError(
-                    "No Token available in python-social-auth for %s" % (
-                        username
-                    )
-                )
+                raise ValueError(f"No Token available in python-social-auth for {username}")
 
         auth_string = 'user=%s\1auth=Bearer %s\1\1' % (
             google_email_address,

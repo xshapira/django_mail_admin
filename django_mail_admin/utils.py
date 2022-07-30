@@ -82,9 +82,8 @@ def get_body_from_message(message, maintype, subtype):
 
 
 def get_attachment_save_path(instance, filename):
-    if hasattr(instance, 'name'):
-        if not instance.name:
-            instance.name = filename  # set original filename
+    if hasattr(instance, 'name') and not instance.name:
+        instance.name = filename  # set original filename
     path = get_attachment_upload_to()
     if '%' in path:
         path = datetime.datetime.utcnow().strftime(path)
@@ -103,8 +102,10 @@ def parse_priority(priority):
         priority = getattr(PRIORITY, priority, None)
 
         if priority is None:
-            raise ValueError('Invalid priority, must be one of: %s' %
-                             ', '.join(PRIORITY._fields))
+            raise ValueError(
+                f"Invalid priority, must be one of: {', '.join(PRIORITY._fields)}"
+            )
+
     return priority
 
 
@@ -125,7 +126,7 @@ def parse_emails(emails):
         try:
             validate_email_with_name(i)
         except ValidationError:
-            raise ValidationError('%s is not a valid email address' % i)
+            raise ValidationError(f'{i} is not a valid email address')
 
     return emails
 

@@ -57,11 +57,7 @@ class ImapTransport(EmailTransport):
     def _get_all_message_ids(self):
         # Fetch all the message uids
         response, message_ids = self.server.uid('search', None, 'ALL')
-        message_id_string = message_ids[0].strip()
-        # Usually `message_id_string` will be a list of space-separated
-        # ids; we must make sure that it isn't an empty string before
-        # splitting into individual UIDs.
-        if message_id_string:
+        if message_id_string := message_ids[0].strip():
             return message_id_string.decode().split(' ')
         return []
 
@@ -85,10 +81,7 @@ class ImapTransport(EmailTransport):
                 if int(size) <= int(self.max_message_size):
                     safe_message_ids.append(uid)
             except ValueError as e:
-                logger.warning(
-                    "ValueError: %s working on %s" % (e, each_msg[0])
-                )
-                pass
+                logger.warning(f"ValueError: {e} working on {each_msg[0]}")
         return safe_message_ids
 
     def get_message(self, condition=None):

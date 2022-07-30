@@ -74,17 +74,17 @@ def send(sender, recipients=None, template=None, subject='',
     try:
         recipients = parse_emails(recipients)
     except ValidationError as e:
-        raise ValidationError('recipients: %s' % e.message)
+        raise ValidationError(f'recipients: {e.message}')
 
     try:
         cc = parse_emails(cc)
     except ValidationError as e:
-        raise ValidationError('c: %s' % e.message)
+        raise ValidationError(f'c: {e.message}')
 
     try:
         bcc = parse_emails(bcc)
     except ValidationError as e:
-        raise ValidationError('bcc: %s' % e.message)
+        raise ValidationError(f'bcc: {e.message}')
 
     priority = parse_priority(priority)
 
@@ -106,16 +106,18 @@ def send(sender, recipients=None, template=None, subject='',
             raise ValueError('You can\'t specify both "template" and "html_message" arguments')
 
     if backend and backend not in get_available_backends().keys():
-        raise ValueError('%s is not a valid backend alias' % backend)
+        raise ValueError(f'{backend} is not a valid backend alias')
 
     email = create(sender, recipients, cc, bcc,
                    subject, message, html_message, scheduled_time, headers, template,
                    priority, commit=commit, backend=backend)
 
     if variable_dict:
-        variables = []
-        for k, v in variable_dict.items():
-            variables.append(TemplateVariable(name=k, value=str(v), email=email))
+        variables = [
+            TemplateVariable(name=k, value=str(v), email=email)
+            for k, v in variable_dict.items()
+        ]
+
         TemplateVariable.objects.bulk_create(variables, 20)
     if attachments:
         attachments = create_attachments(attachments)
@@ -135,9 +137,7 @@ def send_many(kwargs_list):
     Internally, it uses Django's bulk_create command for efficiency reasons.
     Currently send_many() can't be used to send emails with priority = 'now'.
     """
-    emails = []
-    for kwargs in kwargs_list:
-        emails.append(send(commit=False, **kwargs))
+    emails = [send(commit=False, **kwargs) for kwargs in kwargs_list]
     OutgoingEmail.objects.bulk_create(emails)
 
 
@@ -161,8 +161,10 @@ def send_queued(processes=1, log_level=None):
     total_sent, total_failed = 0, 0
     total_email = len(queued_emails)
 
-    logger.info('Started sending %s emails with %s processes.' %
-                (total_email, processes))
+    logger.info(
+        f'Started sending {total_email} emails with {processes} processes.'
+    )
+
 
     if log_level is None:
         log_level = get_log_level()
@@ -184,13 +186,10 @@ def send_queued(processes=1, log_level=None):
             results = pool.map(_send_bulk, email_lists)
             pool.terminate()
 
-            total_sent = sum([result[0] for result in results])
-            total_failed = sum([result[1] for result in results])
-    message = '%s emails attempted, %s sent, %s failed' % (
-        total_email,
-        total_sent,
-        total_failed
-    )
+            total_sent = sum(result[0] for result in results)
+            total_failed = sum(result[1] for result in results)
+    message = f'{total_email} emails attempted, {total_sent} sent, {total_failed} failed'
+
     logger.info(message)
     return (total_sent, total_failed)
 
@@ -209,7 +208,7 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
     failed_emails = []  # This is a list of two tuples (email, exception)
     email_count = len(emails)
 
-    logger.info('Process started, sending %s emails' % email_count)
+    logger.info(f'Process started, sending {email_count} emails')
 
     def send(email):
         try:
@@ -271,9 +270,8 @@ def _send_bulk(emails, uses_multiprocessing=True, log_level=None):
             Log.objects.bulk_create(logs)
 
     logger.info(
-        'Process finished, %s attempted, %s sent, %s failed' % (
-            email_count, len(sent_emails), len(failed_emails)
-        )
+        f'Process finished, {email_count} attempted, {len(sent_emails)} sent, {len(failed_emails)} failed'
     )
+
 
     return len(sent_emails), len(failed_emails)

@@ -12,7 +12,7 @@ def get_cache_key(name):
     Prefixes and slugify the key name
     """
     # TODO: add possibility to specify custom cache key to settings
-    return 'django_mail_admin:template:%s' % (slugify(name))
+    return f'django_mail_admin:template:{slugify(name)}'
 
 
 def set(name, content):

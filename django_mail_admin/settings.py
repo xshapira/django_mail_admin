@@ -26,12 +26,7 @@ def get_available_backends():
     if backends:
         return backends
 
-    # Try to get backend settings from old style
-    # DJANGO_MAIL_ADMIN = {
-    #     'EMAIL_BACKEND': 'mybackend'
-    # }
-    backend = get_config().get('EMAIL_BACKEND')
-    if backend:
+    if backend := get_config().get('EMAIL_BACKEND'):
         warnings.warn('Please use the new DJANGO_MAIL_ADMIN["BACKENDS"] settings',
                       DeprecationWarning)
 
@@ -60,12 +55,11 @@ def get_cache_backend():
     if hasattr(settings, 'CACHES'):
         if "django_mail_admin" in settings.CACHES:
             return get_cache("django_mail_admin")
-        else:
-            # Sometimes this raises InvalidCacheBackendError, which is ok too
-            try:
-                return get_cache("default")
-            except InvalidCacheBackendError:
-                pass
+        # Sometimes this raises InvalidCacheBackendError, which is ok too
+        try:
+            return get_cache("default")
+        except InvalidCacheBackendError:
+            pass
     return None
 
 

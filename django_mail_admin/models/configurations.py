@@ -171,15 +171,13 @@ class Mailbox(models.Model):
     @property
     def location(self):
         """Returns the location (domain and path) of messages."""
-        return self._domain if self._domain else '' + self._protocol_info.path
+        return self._domain or f'{self._protocol_info.path}'
 
     @property
     def type(self):
         """Returns the 'transport' name for this mailbox."""
         scheme = self._protocol_info.scheme.lower()
-        if '+' in scheme:
-            return scheme.split('+')[0]
-        return scheme
+        return scheme.split('+')[0] if '+' in scheme else scheme
 
     @property
     def use_ssl(self):
@@ -195,17 +193,13 @@ class Mailbox(models.Model):
     def archive(self):
         """Returns (if specified) the folder to archive messages to."""
         archive_folder = self._query_string.get('archive', None)
-        if not archive_folder:
-            return None
-        return archive_folder[0]
+        return archive_folder[0] if archive_folder else None
 
     @property
     def folder(self):
         """Returns (if specified) the folder to fetch mail from."""
         folder = self._query_string.get('folder', None)
-        if not folder:
-            return None
-        return folder[0]
+        return folder[0] if folder else None
 
     def get_connection(self):
         """Returns the transport instance for this mailbox.
@@ -219,27 +213,25 @@ class Mailbox(models.Model):
         elif self.type == 'imap':
             conn = ImapTransport(
                 self.location,
-                port=self.port if self.port else None,
+                port=self.port or None,
                 ssl=self.use_ssl,
                 tls=self.use_tls,
                 archive=self.archive,
-                folder=self.folder
+                folder=self.folder,
             )
+
             conn.connect(self.username, self.password)
         elif self.type == 'gmail':
             conn = GmailImapTransport(
                 self.location,
-                port=self.port if self.port else None,
+                port=self.port or None,
                 ssl=True,
-                archive=self.archive
+                archive=self.archive,
             )
+
             conn.connect(self.username, self.password)
         elif self.type == 'pop3':
-            conn = Pop3Transport(
-                self.location,
-                port=self.port if self.port else None,
-                ssl=self.use_ssl
-            )
+            conn = Pop3Transport(self.location, port=self.port or None, ssl=self.use_ssl)
             conn.connect(self.username, self.password)
         elif self.type == 'maildir':
             conn = MaildirTransport(self.location)
@@ -277,7 +269,7 @@ class Mailbox(models.Model):
                 )
         elif (
             strip_unallowed_mimetypes()
-            and not msg.get_content_type() in get_allowed_mimetypes()
+            and msg.get_content_type() not in get_allowed_mimetypes()
         ):
             for header, value in msg.items():
                 new[header] = value
@@ -297,8 +289,7 @@ class Mailbox(models.Model):
             ('attachment' in msg.get('Content-Disposition', ''))
         ):
             filename = None
-            raw_filename = msg.get_filename()
-            if raw_filename:
+            if raw_filename := msg.get_filename():
                 filename = utils.convert_header_to_unicode(raw_filename)
             if not filename:
                 extension = mimetypes.guess_extension(msg.get_content_type())
@@ -369,11 +360,9 @@ class Mailbox(models.Model):
             self._process_save_original_message(message, msg)
         msg.mailbox = self
         if 'subject' in message:
-            msg.subject = (
-                utils.convert_header_to_unicode(message['subject'])[0:255]
-            )
+            msg.subject = utils.convert_header_to_unicode(message['subject'])[:255]
         if 'message-id' in message:
-            msg.message_id = message['message-id'][0:255].strip()
+            msg.message_id = message['message-id'][:255].strip()
         if 'from' in message:
             msg.from_header = utils.convert_header_to_unicode(message['from'])
         if 'to' in message:
@@ -409,17 +398,11 @@ class Mailbox(models.Model):
             with NamedTemporaryFile(suffix=".eml.gz") as fp_tmp:
                 with gzip.GzipFile(fileobj=fp_tmp, mode="w") as fp:
                     fp.write(message.as_string().encode('utf-8'))
-                msg.eml.save(
-                    "%s.eml.gz" % (uuid.uuid4(),),
-                    File(fp_tmp),
-                    save=False
-                )
+                msg.eml.save(f"{uuid.uuid4()}.eml.gz", File(fp_tmp), save=False)
 
         else:
             msg.eml.save(
-                '%s.eml' % uuid.uuid4(),
-                ContentFile(message.as_string()),
-                save=False
+                f'{uuid.uuid4()}.eml', ContentFile(message.as_string()), save=False
             )
 
     def get_new_mail(self, condition=None):

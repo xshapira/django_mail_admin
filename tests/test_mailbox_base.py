@@ -60,8 +60,7 @@ class EmailMessageTestCase(TestCase):
         while True:
             if time.time() > maximum_wait:
                 raise EmailIntegrationTimeout()
-            messages = self.mailbox.get_new_mail(condition)
-            if messages:
+            if messages := self.mailbox.get_new_mail(condition):
                 return messages
             time.sleep(5)
 
@@ -101,16 +100,14 @@ class EmailMessageTestCase(TestCase):
             right = right.replace('"', '').upper()
         left = left.replace('\n\t', ' ').replace('\n ', ' ')
         right = right.replace('\n\t', ' ').replace('\n ', ' ')
-        if right != left:
-            return False
-        return True
+        return right == left
 
     def compare_email_objects(self, left, right):
         # Compare headers
         for key, value in left.items():
-            if not right[key] and key in self.ALLOWED_EXTRA_HEADERS:
-                continue
             if not right[key]:
+                if key in self.ALLOWED_EXTRA_HEADERS:
+                    continue
                 raise AssertionError("Extra header '%s'" % key)
             if not self._headers_identical(right[key], value, header=key):
                 raise AssertionError(
@@ -121,9 +118,9 @@ class EmailMessageTestCase(TestCase):
                     )
                 )
         for key, value in right.items():
-            if not left[key] and key in self.ALLOWED_EXTRA_HEADERS:
-                continue
             if not left[key]:
+                if key in self.ALLOWED_EXTRA_HEADERS:
+                    continue
                 raise AssertionError("Extra header '%s'" % key)
             if not self._headers_identical(left[key], value, header=key):
                 raise AssertionError(
@@ -145,16 +142,13 @@ class EmailMessageTestCase(TestCase):
                     left_payloads[n],
                     right_payloads[n]
                 )
-        else:
-            if left.get_payload() is None or right.get_payload() is None:
-                if left.get_payload() is None:
-                    if right.get_payload is not None:
-                        self._raise_mismatched(left, right)
-                if right.get_payload() is None:
-                    if left.get_payload is not None:
-                        self._raise_mismatched(left, right)
-            elif left.get_payload().strip() != right.get_payload().strip():
+        elif left.get_payload() is None or right.get_payload() is None:
+            if left.get_payload() is None and right.get_payload is not None:
                 self._raise_mismatched(left, right)
+            if right.get_payload() is None and left.get_payload is not None:
+                self._raise_mismatched(left, right)
+        elif left.get_payload().strip() != right.get_payload().strip():
+            self._raise_mismatched(left, right)
 
     def _raise_mismatched(self, left, right):
         raise AssertionError(
@@ -165,9 +159,11 @@ class EmailMessageTestCase(TestCase):
         )
 
     def assertEqual(self, left, right):  # noqa: N802
-        if not isinstance(left, email.message.Message):
-            return super(EmailMessageTestCase, self).assertEqual(left, right)
-        return self.compare_email_objects(left, right)
+        return (
+            self.compare_email_objects(left, right)
+            if isinstance(left, email.message.Message)
+            else super(EmailMessageTestCase, self).assertEqual(left, right)
+        )
 
     def tearDown(self):
         for message in IncomingEmail.objects.all():

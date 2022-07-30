@@ -208,9 +208,9 @@ class TestProcessEmail(EmailMessageTestCase):
         #                  save=False)
         msg.mailbox = self.mailbox
         if 'subject' in message:
-            msg.subject = convert_header_to_unicode(message['subject'])[0:255]
+            msg.subject = convert_header_to_unicode(message['subject'])[:255]
         if 'message-id' in message:
-            msg.message_id = message['message-id'][0:255]
+            msg.message_id = message['message-id'][:255]
         if 'from' in message:
             msg.from_header = convert_header_to_unicode(message['from'])
         if 'to' in message:

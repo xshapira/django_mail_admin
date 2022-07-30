@@ -8,7 +8,7 @@ from django_mail_admin.lockfile import FileLock, FileLocked
 
 def setup_fake_lock(lock_file_name):
     pid = os.getpid()
-    lockfile = '%s.lock' % pid
+    lockfile = f'{pid}.lock'
     try:
         os.remove(lock_file_name)
     except OSError:
@@ -19,29 +19,29 @@ def setup_fake_lock(lock_file_name):
 class LockTest(TestCase):
     def test_process_killed_force_unlock(self):
         pid = os.getpid()
-        lockfile = '%s.lock' % pid
+        lockfile = f'{pid}.lock'
         setup_fake_lock('test.lock')
 
         with open(lockfile, 'w+') as f:
             f.write('9999999')
         assert os.path.exists(lockfile)
         with FileLock('test'):
-            assert True
+            pass
 
     def test_force_unlock_in_same_process(self):
         pid = os.getpid()
-        lockfile = '%s.lock' % pid
+        lockfile = f'{pid}.lock'
         os.symlink(lockfile, 'test.lock')
 
         with open(lockfile, 'w+') as f:
             f.write(str(os.getpid()))
 
         with FileLock('test', force=True):
-            assert True
+            pass
 
     def test_exception_after_timeout(self):
         pid = os.getpid()
-        lockfile = '%s.lock' % pid
+        lockfile = f'{pid}.lock'
         setup_fake_lock('test.lock')
 
         with open(lockfile, 'w+') as f:
@@ -55,7 +55,7 @@ class LockTest(TestCase):
 
     def test_force_after_timeout(self):
         pid = os.getpid()
-        lockfile = '%s.lock' % pid
+        lockfile = f'{pid}.lock'
         setup_fake_lock('test.lock')
 
         with open(lockfile, 'w+') as f:
@@ -64,7 +64,7 @@ class LockTest(TestCase):
         timeout = 1
         start = time.time()
         with FileLock('test', timeout=timeout, force=True):
-            assert True
+            pass
         end = time.time()
         assert end - start > timeout
 
